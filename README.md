@@ -4,7 +4,7 @@
 
 Our demo data:
 
-```{r data, message = FALSE, warning = FALSE}
+```R
 library(dplyr)
 library(raadtools)
 library(SOmap)
@@ -31,7 +31,7 @@ ice_palette <- scale_fill_gradient(low = "#FFFFFF", high = "#404040", guide = FA
 
 A static overview plot:
 
-```{r plot1}
+```R
 ggplot() + geom_raster(data = icexy %>% mutate(ice = values(ice_raster[[1]])), aes(x, y, fill = ice)) +
     ice_palette + geom_point(data = ele, aes(x, y), colour = "orange", size = 2) +
     theme_void()
@@ -43,7 +43,7 @@ ggplot() + geom_raster(data = icexy %>% mutate(ice = values(ice_raster[[1]])), a
 
 To use `gganimate`, we need to have time-indexed sea ice data. The sea ice are in raster format, which can't be handled directly by `ggplot`. The brute-force option is to build a data.frame of sea ice data, one row per pixel per date:
 
-```{r gganim1}
+```R
 ## expand out into enormous tibble
 icex <- bind_rows(lapply(seq_len(nlayers(ice_raster)), function(z) icexy %>% mutate(ice = values(ice_raster[[z]]), date = dates[z])))
 
@@ -62,7 +62,7 @@ But this uses a lot of memory even with our 10-day demo data, and does not scale
 
 Back when I was a lad, we did this sort of thing by drawing individual frames and stitching them into an animation afterwards. Start with a function that composes an individual frame for a given date:
 
-```{r magick1}
+```R
 compose_frame <- function(this_date, lims = NULL) {
     ice_idx <- which(as.Date(getZ(ice_raster)) == this_date)
     this_ice <- icexy %>% mutate(ice = values(subset(ice_raster, ice_idx)))
@@ -80,7 +80,7 @@ compose_frame <- function(this_date, lims = NULL) {
 
 And then build the animation. We can do this using `magick`, which frees us from the need to save individual frames to temporary files or do the stitching manually:
 
-```{r magick2}
+```R
 library(magick)
 img <- image_graph(640, 480, res = 72)
 my_lims <- NULL
@@ -103,7 +103,7 @@ print(animation)
 
 Unfortunately, though, this still doesn't scale particularly well. Running this on the full track (188 frames) was tenable to generate the `animation` object, but took a long time (30 mins) to save as a gif. I am fairly sure that this is because `magick` uses the `imagemagick` library to do that conversion, whereas `gganimate` uses `gifski`, which is substantially faster. So instead we can save the `ggplot` objects to a list, as before, and generate the gif ourselves using `gifski` (code not run here):
 
-```{r gifski, eval = FALSE}
+```R
 ## generate a list of ggplot objects
 my_lims <- NULL
 out <- lapply(dates, function(dt) {
